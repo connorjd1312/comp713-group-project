@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>New Repair Ticket · Repair Desk</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="index.html">Repair Desk</a>
+    <nav><a href="index.html" class="active">New ticket</a><a href="tickets.html">All tickets</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Book a device repair</h1>
+  <p class="subtitle">Fill in your details and describe the problem. A technician will update the status as work progresses.</p>
+
+  <div id="message" class="message"></div>
+
+  <!-- novalidate：關掉瀏覽器內建檢查，讓伺服器的驗證結果顯示出來 -->
+  <form id="ticketForm" class="card" novalidate>
+    <div class="grid-2">
+      <div class="field">
+        <label for="name">Name *</label>
+        <input id="name" name="name" autocomplete="name">
+        <div class="field-error" data-for="name"></div>
+      </div>
+      <div class="field">
+        <label for="email">Email *</label>
+        <input id="email" name="email" type="email" autocomplete="email">
+        <div class="field-error" data-for="email"></div>
+      </div>
+      <div class="field">
+        <label for="phone">Phone</label>
+        <input id="phone" name="phone" autocomplete="tel">
+        <div class="field-error" data-for="phone"></div>
+      </div>
+      <div class="field">
+        <label for="deviceType">Device type *</label>
+        <select id="deviceType" name="deviceType">
+          <option value="">Select…</option>
+          <option value="PHONE">Phone</option>
+          <option value="LAPTOP">Laptop</option>
+          <option value="TABLET">Tablet</option>
+          <option value="OTHER">Other</option>
+        </select>
+        <div class="field-error" data-for="deviceType"></div>
+      </div>
+    </div>
+    <div class="field">
+      <label for="deviceModel">Device model</label>
+      <input id="deviceModel" name="deviceModel" placeholder="e.g. iPhone 13, MacBook Air M1">
+      <div class="field-error" data-for="deviceModel"></div>
+    </div>
+    <div class="field">
+      <label for="issueDescription">What is wrong? *</label>
+      <textarea id="issueDescription" name="issueDescription" placeholder="At least 10 characters"></textarea>
+      <div class="field-error" data-for="issueDescription"></div>
+    </div>
+    <button type="submit" class="primary" id="submitBtn">Submit ticket</button>
+  </form>
+</main>
+
+<script src="app.js"></script>
+<script>
+  const form = document.getElementById('ticketForm');
+  const message = document.getElementById('message');
+  const submitBtn = document.getElementById('submitBtn');
+
+  function clearFieldErrors() {
+    form.querySelectorAll('.field-error').forEach(e => e.textContent = '');
+    form.querySelectorAll('.invalid').forEach(e => e.classList.remove('invalid'));
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    clearFieldErrors();
+    hideMessage(message);
+
+    const data = Object.fromEntries(new FormData(form).entries());
+    for (const key of ['phone', 'deviceModel']) if (!data[key]) data[key] = null;
+
+    submitBtn.disabled = true;
+    try {
+      const ticket = await callApi(API_BASE, { method: 'POST', body: JSON.stringify(data) });
+      showMessage(message, 'success',
+        `Ticket <strong>#${ticket.id}</strong> created with status ${badge(ticket.status)}. ` +
+        `<a href="ticket.html?id=${ticket.id}">View ticket →</a>`);
+      form.reset();
+    } catch (err) {
+      showMessage(message, 'error', errorHtml(err));
+      for (const [field, text] of Object.entries(err.fieldErrors || {})) {
+        const slot = form.querySelector(`.field-error[data-for="${field}"]`);
+        if (slot) slot.textContent = text;
+        form.elements[field]?.classList.add('invalid');
+      }
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>All Tickets · Repair Desk</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="index.html">Repair Desk</a>
+    <nav><a href="index.html">New ticket</a><a href="tickets.html" class="active">All tickets</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Repair tickets</h1>
+  <p class="subtitle">Technician view. Click a ticket to see its history and update its status.</p>
+
+  <div class="card">
+    <form id="filters" class="filters">
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <option value="">All statuses</option>
+          <option>RECEIVED</option><option>DIAGNOSING</option><option>REPAIRING</option>
+          <option>READY</option><option>COLLECTED</option><option>CANCELLED</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="email">Customer email</label>
+        <input id="email" name="email" placeholder="optional">
+      </div>
+      <button type="submit" class="primary">Apply</button>
+      <button type="button" class="secondary" id="resetBtn">Reset</button>
+    </form>
+  </div>
+
+  <div id="message" class="message"></div>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>#</th><th>Customer</th><th>Device</th><th>Status</th><th>Last updated</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script>
+  const filters = document.getElementById('filters');
+  const rows = document.getElementById('rows');
+  const message = document.getElementById('message');
+
+  async function loadTickets() {
+    hideMessage(message);
+    const params = new URLSearchParams();
+    const status = filters.status.value;
+    const email = filters.email.value.trim();
+    if (status) params.set('status', status);
+    if (email) params.set('email', email);
+
+    rows.innerHTML = '<tr><td colspan="5" class="muted">Loading…</td></tr>';
+    try {
+      const tickets = await callApi(API_BASE + (params.toString() ? '?' + params : ''));
+      if (tickets.length === 0) {
+        rows.innerHTML = '<tr><td colspan="5" class="muted">No tickets match these filters.</td></tr>';
+        return;
+      }
+      rows.innerHTML = tickets.map(t => `
+        <tr data-id="${t.id}">
+          <td>${t.id}</td>
+          <td>${escapeHtml(t.customerName)}<br><span class="muted">${escapeHtml(t.customerEmail)}</span></td>
+          <td>${escapeHtml(t.deviceType)}<br><span class="muted">${escapeHtml(t.deviceModel || '')}</span></td>
+          <td>${badge(t.status)}</td>
+          <td>${formatDate(t.updatedAt)}</td>
+        </tr>`).join('');
+    } catch (err) {
+      rows.innerHTML = '<tr><td colspan="5" class="muted">Could not load tickets.</td></tr>';
+      showMessage(message, 'error', errorHtml(err));
+    }
+  }
+
+  rows.addEventListener('click', e => {
+    const row = e.target.closest('tr[data-id]');
+    if (row) location.href = 'ticket.html?id=' + row.dataset.id;
+  });
+  filters.addEventListener('submit', e => { e.preventDefault(); loadTickets(); });
+  document.getElementById('resetBtn').addEventListener('click', () => { filters.reset(); loadTickets(); });
+
+  loadTickets();
+</script>
+</body>
+</html>

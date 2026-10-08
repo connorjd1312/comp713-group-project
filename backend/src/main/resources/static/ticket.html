@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ticket · Repair Desk</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="index.html">Repair Desk</a>
+    <nav><a href="index.html">New ticket</a><a href="tickets.html">All tickets</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <p><a href="tickets.html">← Back to all tickets</a></p>
+  <h1 id="title">Ticket</h1>
+  <p class="subtitle" id="subtitle"></p>
+
+  <div id="message" class="message"></div>
+
+  <div id="content" style="display:none">
+    <div class="card">
+      <div class="steps" id="steps"></div>
+      <dl class="details grid-2" style="margin-top:16px">
+        <div><dt>Customer</dt><dd id="customer"></dd></div>
+        <div><dt>Device</dt><dd id="device"></dd></div>
+        <div><dt>Created</dt><dd id="created"></dd></div>
+        <div><dt>Last updated</dt><dd id="updated"></dd></div>
+      </dl>
+      <dt class="muted" style="font-size:13px">Issue</dt>
+      <dd id="issue" style="margin:0"></dd>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:18px;margin-top:0">Update status (technician)</h2>
+      <div class="field">
+        <label for="note">Note (optional)</label>
+        <input id="note" placeholder="e.g. Replacing screen">
+      </div>
+      <div class="actions">
+        <button class="primary" id="advanceBtn"></button>
+        <div class="field">
+          <label for="manualStatus">Or set a specific status</label>
+          <select id="manualStatus">
+            <option>RECEIVED</option><option>DIAGNOSING</option><option>REPAIRING</option>
+            <option>READY</option><option>COLLECTED</option><option>CANCELLED</option>
+          </select>
+        </div>
+        <button class="secondary" id="manualBtn">Set status</button>
+        <button class="danger" id="cancelBtn">Cancel ticket</button>
+      </div>
+      <p class="muted" style="font-size:13px;margin-bottom:0">
+        The server only allows one step forward at a time. Cancelling is only possible while the ticket is RECEIVED.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:18px;margin-top:0">Status history</h2>
+      <ul class="history" id="history"></ul>
+    </div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script>
+  const id = new URLSearchParams(location.search).get('id');
+  const message = document.getElementById('message');
+  const noteInput = document.getElementById('note');
+  const advanceBtn = document.getElementById('advanceBtn');
+  let current = null;
+
+  function render(t) {
+    current = t;
+    document.getElementById('content').style.display = '';
+    document.getElementById('title').innerHTML = `Ticket #${t.id} ${badge(t.status)}`;
+    document.getElementById('subtitle').textContent = `${t.deviceType} · ${t.deviceModel || 'model not given'}`;
+    document.getElementById('customer').innerHTML =
+      `${escapeHtml(t.customerName)}<br><span class="muted">${escapeHtml(t.customerEmail)}</span>`;
+    document.getElementById('device').textContent = `${t.deviceType} ${t.deviceModel || ''}`;
+    document.getElementById('created').textContent = formatDate(t.createdAt);
+    document.getElementById('updated').textContent = formatDate(t.updatedAt);
+    document.getElementById('issue').textContent = t.issueDescription;
+
+    const pos = STATUS_FLOW.indexOf(t.status);
+    document.getElementById('steps').innerHTML = t.status === 'CANCELLED'
+      ? '<span class="current" style="background:var(--danger)">CANCELLED</span>'
+      : STATUS_FLOW.map((s, i) => `<span class="${i < pos ? 'done' : i === pos ? 'current' : ''}">${s}</span>`).join('');
+
+    const next = NEXT_STATUS[t.status];
+    advanceBtn.textContent = next ? `Move to ${next}` : 'No further steps';
+    advanceBtn.disabled = !next;
+
+    document.getElementById('history').innerHTML = t.history.length === 0
+      ? '<li class="muted">No status changes yet.</li>'
+      : t.history.slice().reverse().map(h => `
+          <li>${badge(h.from)} → ${badge(h.to)} ${h.note ? '· ' + escapeHtml(h.note) : ''}
+          <div class="when">${formatDate(h.at)}</div></li>`).join('');
+  }
+
+  async function load() {
+    if (!id) { showMessage(message, 'error', '<strong>No ticket id in the address.</strong>'); return; }
+    try {
+      render(await callApi(`${API_BASE}/${encodeURIComponent(id)}`));
+    } catch (err) {
+      showMessage(message, 'error', errorHtml(err));
+    }
+  }
+
+  async function changeStatus(status) {
+    hideMessage(message);
+    try {
+      const updated = await callApi(`${API_BASE}/${current.id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, note: noteInput.value.trim() || null }),
+      });
+      render(updated);
+      noteInput.value = '';
+      showMessage(message, 'success', `Status changed to ${badge(updated.status)}.`);
+    } catch (err) {
+      showMessage(message, 'error', errorHtml(err));
+    }
+  }
+
+  advanceBtn.addEventListener('click', () => changeStatus(NEXT_STATUS[current.status]));
+  document.getElementById('manualBtn').addEventListener('click',
+    () => changeStatus(document.getElementById('manualStatus').value));
+
+  document.getElementById('cancelBtn').addEventListener('click', async () => {
+    hideMessage(message);
+    try {
+      await callApi(`${API_BASE}/${current.id}`, { method: 'DELETE' });
+      await load();
+      showMessage(message, 'success', 'Ticket cancelled.');
+    } catch (err) {
+      showMessage(message, 'error', errorHtml(err));
+    }
+  });
+
+  load();
+</script>
+</body>
+</html>
