@@ -2,8 +2,11 @@ package nz.ac.aut.comp713.repair_tickets.service;
 
 import nz.ac.aut.comp713.repair_tickets.dto.TicketResponse;
 import nz.ac.aut.comp713.repair_tickets.exception.BusinessRuleException;
+import nz.ac.aut.comp713.repair_tickets.exception.ForbiddenException;
 import nz.ac.aut.comp713.repair_tickets.exception.NotFoundException;
 import nz.ac.aut.comp713.repair_tickets.model.Customer;
+import nz.ac.aut.comp713.repair_tickets.model.Quote;
+import nz.ac.aut.comp713.repair_tickets.model.QuoteStatus;
 import nz.ac.aut.comp713.repair_tickets.model.RepairTicket;
 import nz.ac.aut.comp713.repair_tickets.model.TicketStatus;
 import nz.ac.aut.comp713.repair_tickets.repository.CustomerRepository;
@@ -11,6 +14,7 @@ import nz.ac.aut.comp713.repair_tickets.repository.RepairTicketRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -77,8 +81,62 @@ public class TicketService {
             throw new BusinessRuleException("INVALID_TRANSITION",
                     "Cannot move ticket " + id + " from " + ticket.getStatus() + " to " + next);
         }
+        checkQuoteAllows(ticket, next);
         ticket.changeStatus(next, note);
         return TicketResponse.from(tickets.saveAndFlush(ticket));
+    }
+
+    /**
+     * Technician issues a quote while diagnosing. A new quote is only allowed when there is no
+     * quote yet or the customer declined the previous one.
+     */
+    @Transactional
+    public TicketResponse createQuote(Long id, BigDecimal amount, String description) {
+        RepairTicket ticket = findTicket(id);
+        if (ticket.getStatus() != TicketStatus.DIAGNOSING) {
+            throw new BusinessRuleException("QUOTE_NOT_ALLOWED",
+                    "Ticket " + id + " is " + ticket.getStatus() + "; quotes can only be issued while DIAGNOSING");
+        }
+        Quote current = ticket.currentQuote();
+        if (current != null && current.getStatus() != QuoteStatus.DECLINED) {
+            throw new BusinessRuleException("QUOTE_EXISTS",
+                    "Ticket " + id + " already has a " + current.getStatus() + " quote");
+        }
+        ticket.addQuote(amount, description.trim());
+        return TicketResponse.from(tickets.saveAndFlush(ticket));
+    }
+
+    /** Customer approves or declines the pending quote. Only the ticket's own customer may answer. */
+    @Transactional
+    public TicketResponse decideQuote(Long id, String customerEmail, boolean approved, String comment) {
+        RepairTicket ticket = findTicket(id);
+        if (!ticket.getCustomer().getEmail().equalsIgnoreCase(customerEmail.trim())) {
+            throw new ForbiddenException("Ticket " + id + " does not belong to " + customerEmail.trim());
+        }
+        Quote current = ticket.currentQuote();
+        if (current == null || current.getStatus() != QuoteStatus.PENDING) {
+            throw new BusinessRuleException("NO_PENDING_QUOTE",
+                    "Ticket " + id + " has no quote waiting for a decision");
+        }
+        ticket.respondToQuote(approved, comment == null ? null : comment.trim());
+        return TicketResponse.from(tickets.saveAndFlush(ticket));
+    }
+
+    /** Repair work needs an approved quote; returning the device unrepaired needs a declined one. */
+    private void checkQuoteAllows(RepairTicket ticket, TicketStatus next) {
+        if (ticket.getStatus() != TicketStatus.DIAGNOSING) {
+            return;
+        }
+        Quote quote = ticket.currentQuote();
+        QuoteStatus quoteStatus = quote == null ? null : quote.getStatus();
+        if (next == TicketStatus.REPAIRING && quoteStatus != QuoteStatus.APPROVED) {
+            throw new BusinessRuleException("QUOTE_NOT_APPROVED",
+                    "Ticket " + ticket.getId() + " needs an approved quote before repair can start");
+        }
+        if (next == TicketStatus.CANCELLED && quoteStatus != QuoteStatus.DECLINED) {
+            throw new BusinessRuleException("QUOTE_NOT_DECLINED",
+                    "Ticket " + ticket.getId() + " can only be closed unrepaired after the customer declines the quote");
+        }
     }
 
     /** 取消工單：只有還在 RECEIVED（尚未開始檢測）時可以取消。保留紀錄，不真的刪除。 */

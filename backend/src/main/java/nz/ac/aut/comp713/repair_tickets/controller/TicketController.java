@@ -1,7 +1,9 @@
 package nz.ac.aut.comp713.repair_tickets.controller;
 
 import jakarta.validation.Valid;
+import nz.ac.aut.comp713.repair_tickets.dto.CreateQuoteRequest;
 import nz.ac.aut.comp713.repair_tickets.dto.CreateTicketRequest;
+import nz.ac.aut.comp713.repair_tickets.dto.QuoteDecisionRequest;
 import nz.ac.aut.comp713.repair_tickets.dto.TicketResponse;
 import nz.ac.aut.comp713.repair_tickets.dto.UpdateStatusRequest;
 import nz.ac.aut.comp713.repair_tickets.model.TicketStatus;
@@ -51,6 +53,20 @@ public class TicketController {
     @PatchMapping("/{id}/status")
     public TicketResponse updateStatus(@PathVariable Long id, @Valid @RequestBody UpdateStatusRequest req) {
         return service.updateStatus(id, req.status(), req.note());
+    }
+
+    /** POST /api/tickets/{id}/quote → 201 (technician); 409 if not DIAGNOSING or a quote is already open. */
+    @PostMapping("/{id}/quote")
+    public ResponseEntity<TicketResponse> createQuote(@PathVariable Long id,
+                                                      @Valid @RequestBody CreateQuoteRequest req) {
+        TicketResponse updated = service.createQuote(id, req.amount(), req.description());
+        return ResponseEntity.created(URI.create("/api/tickets/" + id)).body(updated);
+    }
+
+    /** POST /api/tickets/{id}/quote/decision → 200 (customer); 403 for another customer's ticket, 409 if nothing is pending. */
+    @PostMapping("/{id}/quote/decision")
+    public TicketResponse decideQuote(@PathVariable Long id, @Valid @RequestBody QuoteDecisionRequest req) {
+        return service.decideQuote(id, req.customerEmail(), req.approved(), req.comment());
     }
 
     /** DELETE /api/tickets/{id} → 204，取消工單（保留紀錄）；已開始處理回 409。 */

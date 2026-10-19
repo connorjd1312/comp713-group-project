@@ -114,4 +114,61 @@ class TicketControllerTests {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("CANNOT_CANCEL"));
     }
+
+    // ---- Assessment 3: quote endpoints ----
+
+    private long diagnosingTicket() throws Exception {
+        long id = createTicket();
+        mvc.perform(patch("/api/tickets/" + id + "/status").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"DIAGNOSING\"}"))
+                .andExpect(status().isOk());
+        return id;
+    }
+
+    @Test
+    void createQuoteReturns201AndShowsPendingQuote() throws Exception {
+        long id = diagnosingTicket();
+        mvc.perform(post("/api/tickets/" + id + "/quote").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":189.00,\"description\":\"Replace screen\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.quote.status").value("PENDING"))
+                .andExpect(jsonPath("$.quote.amount").value(189.00));
+    }
+
+    @Test
+    void invalidQuoteReturns400WithFieldErrors() throws Exception {
+        long id = diagnosingTicket();
+        mvc.perform(post("/api/tickets/" + id + "/quote").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":-5,\"description\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.amount").exists())
+                .andExpect(jsonPath("$.fieldErrors.description").exists());
+    }
+
+    @Test
+    void repairWithoutApprovalReturns409() throws Exception {
+        long id = diagnosingTicket();
+        mvc.perform(patch("/api/tickets/" + id + "/status").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"REPAIRING\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("QUOTE_NOT_APPROVED"));
+    }
+
+    @Test
+    void decisionByWrongCustomerReturns403ThenOwnerApproves() throws Exception {
+        long id = diagnosingTicket();
+        mvc.perform(post("/api/tickets/" + id + "/quote").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":50,\"description\":\"Clean charging port\"}"))
+                .andExpect(status().isCreated());
+
+        mvc.perform(post("/api/tickets/" + id + "/quote/decision").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerEmail\":\"intruder@example.com\",\"approved\":true}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("FORBIDDEN"));
+
+        mvc.perform(post("/api/tickets/" + id + "/quote/decision").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerEmail\":\"wayne@example.com\",\"approved\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quote.status").value("APPROVED"));
+    }
 }

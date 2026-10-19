@@ -1,6 +1,7 @@
 package nz.ac.aut.comp713.repair_tickets.model;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +43,11 @@ public class RepairTicket {
     @OrderBy("createdAt ASC")
     private List<TicketUpdate> updates = new ArrayList<>();
 
+    // One ticket -> many quotes; the newest one is the current quote
+    @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC, id ASC")
+    private List<Quote> quotes = new ArrayList<>();
+
     protected RepairTicket() { }
 
     public RepairTicket(Customer customer, String deviceType, String deviceModel, String issueDescription) {
@@ -69,6 +75,31 @@ public class RepairTicket {
         status = next;
     }
 
+    /** Issue a new quote and record it in the history without changing the status. */
+    public Quote addQuote(BigDecimal amount, String description) {
+        Quote quote = new Quote(this, amount, description);
+        quotes.add(quote);
+        addNote("Quote issued: $" + amount.toPlainString() + " - " + description);
+        return quote;
+    }
+
+    /** Record the customer's decision on the current quote in the quote and in the history. */
+    public void respondToQuote(boolean approved, String comment) {
+        currentQuote().respond(approved, comment);
+        String text = approved ? "Quote approved by customer" : "Quote declined by customer";
+        addNote(comment == null || comment.isBlank() ? text : text + ": " + comment);
+    }
+
+    /** The newest quote, or null when no quote has been issued. */
+    public Quote currentQuote() {
+        return quotes.isEmpty() ? null : quotes.get(quotes.size() - 1);
+    }
+
+    private void addNote(String note) {
+        updates.add(new TicketUpdate(this, status, status, note));
+        updatedAt = LocalDateTime.now();   // a new quote or decision counts as a change to the ticket
+    }
+
     public Long getId() { return id; }
     public Customer getCustomer() { return customer; }
     public String getDeviceType() { return deviceType; }
@@ -78,4 +109,5 @@ public class RepairTicket {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public List<TicketUpdate> getUpdates() { return updates; }
+    public List<Quote> getQuotes() { return quotes; }
 }
