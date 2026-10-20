@@ -41,8 +41,8 @@
 
   <div class="card">
     <table>
-      <thead><tr><th>#</th><th>Customer</th><th>Device</th><th>Status</th><th>Last updated</th></tr></thead>
-      <tbody id="rows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+      <thead><tr><th>#</th><th>Customer</th><th>Device</th><th>Status</th><th>Quote</th><th>Last updated</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
     </table>
   </div>
 </main>
@@ -61,11 +61,11 @@
     if (status) params.set('status', status);
     if (email) params.set('email', email);
 
-    rows.innerHTML = '<tr><td colspan="5" class="muted">Loading…</td></tr>';
+    rows.innerHTML = '<tr><td colspan="6" class="muted">Loading…</td></tr>';
     try {
       const tickets = await callApi(API_BASE + (params.toString() ? '?' + params : ''));
       if (tickets.length === 0) {
-        rows.innerHTML = '<tr><td colspan="5" class="muted">No tickets match these filters.</td></tr>';
+        rows.innerHTML = '<tr><td colspan="6" class="muted">No tickets match these filters.</td></tr>';
         return;
       }
       rows.innerHTML = tickets.map(t => `
@@ -74,10 +74,11 @@
           <td>${escapeHtml(t.customerName)}<br><span class="muted">${escapeHtml(t.customerEmail)}</span></td>
           <td>${escapeHtml(t.deviceType)}<br><span class="muted">${escapeHtml(t.deviceModel || '')}</span></td>
           <td>${badge(t.status)}</td>
+          <td>${t.quote ? badge(t.quote.status) + '<br><span class="muted">' + formatMoney(t.quote.amount) + '</span>' : ''}</td>
           <td>${formatDate(t.updatedAt)}</td>
         </tr>`).join('');
     } catch (err) {
-      rows.innerHTML = '<tr><td colspan="5" class="muted">Could not load tickets.</td></tr>';
+      rows.innerHTML = '<tr><td colspan="6" class="muted">Could not load tickets.</td></tr>';
       showMessage(message, 'error', errorHtml(err));
     }
   }
