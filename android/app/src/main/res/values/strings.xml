@@ -1,0 +1,80 @@
+<resources>
+    <string name="app_name">Repair Desk</string>
+    <string name="title_new_ticket">Book a repair</string>
+    <string name="title_ticket">Repair</string>
+    <string name="title_ticket_number">Repair #%1$d</string>
+
+    <!-- Sign-in -->
+    <string name="sign_in_title">Track your repairs</string>
+    <string name="sign_in_hint">Enter the email you used when booking. You can book a new repair, follow its progress and approve quotes.</string>
+    <string name="label_email">Email</string>
+    <string name="hint_email">you@example.com</string>
+    <string name="label_server">Server address</string>
+    <string name="server_hint">Emulator: http://10.0.2.2:8080 · Physical phone: http://&lt;your PC\'s IP&gt;:8080</string>
+    <string name="action_sign_in">Continue</string>
+    <string name="error_email">Enter a valid email address</string>
+    <string name="error_server">Enter an address like http://10.0.2.2:8080</string>
+
+    <!-- My repairs -->
+    <string name="signed_in_as">Signed in as %1$s\nServer: %2$s</string>
+    <string name="notifications_off">Notifications are off, so you will only see updates when you open the app. Tap to turn them on.</string>
+    <string name="action_new_ticket">New repair</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_sign_out">Sign out</string>
+    <string name="action_retry">Try again</string>
+    <string name="empty_tickets">You have no repairs yet.\nTap New repair to book one.</string>
+    <string name="error_load_tickets">Could not load your repairs.\n%1$s</string>
+    <string name="ticket_title">#%1$d · %2$s</string>
+    <string name="ticket_updated">Updated %1$s</string>
+    <string name="quote_waiting">Quote waiting for your approval</string>
+
+    <!-- Book a repair -->
+    <string name="booking_for">Booking as %1$s</string>
+    <string name="label_name">Your name</string>
+    <string name="label_phone">Phone (optional)</string>
+    <string name="label_device_type">Device type</string>
+    <string name="label_model">Device model (optional)</string>
+    <string name="hint_model">e.g. iPhone 13</string>
+    <string name="label_issue">What is wrong?</string>
+    <string name="hint_issue">At least 10 characters</string>
+    <string name="action_submit">Book repair</string>
+
+    <!-- Repair detail -->
+    <string name="ticket_created">Repair booked. We will notify you when there is a quote or an update.</string>
+    <string name="ticket_dates">Booked %1$s · updated %2$s</string>
+    <string name="quote_title">Repair quote</string>
+    <string name="quote_sent">Sent %1$s</string>
+    <string name="quote_answered">answered %1$s</string>
+    <string name="hint_comment">Comment for the technician (optional)</string>
+    <string name="action_approve">Approve</string>
+    <string name="action_decline">Decline</string>
+    <string name="decline_title">Decline this quote?</string>
+    <string name="decline_message">The technician can send a revised quote or return your device unrepaired.</string>
+    <string name="quote_approved_message">Quote approved. The technician can now start the repair.</string>
+    <string name="quote_declined_message">Quote declined. The technician has been told.</string>
+    <string name="history_title">History</string>
+    <string name="history_empty">No updates yet.</string>
+    <string name="action_cancel_ticket">Cancel repair</string>
+    <string name="action_keep">Keep it</string>
+    <string name="cancel_title">Cancel this repair?</string>
+    <string name="cancel_message">You can only cancel before the technician starts diagnosing your device.</string>
+    <string name="ticket_cancelled">Repair cancelled.</string>
+    <string name="error_load_ticket">Could not load this repair.\n%1$s</string>
+    <string name="error_refresh">Showing the last loaded data. %1$s</string>
+    <string name="error_not_found">This repair was not found.</string>
+
+    <!-- Notifications -->
+    <string name="channel_name">Repair updates</string>
+    <string name="channel_description">Quotes and status changes for your repairs</string>
+    <string name="notify_title">Repair #%1$d</string>
+    <string name="notify_quote">Quote for your %1$s: %2$s. Tap to approve or decline.</string>
+    <string name="notify_ready">Your %1$s is ready for pickup.</string>
+    <string name="notify_status">Your %1$s is now %2$s.</string>
+
+    <string-array name="device_types">
+        <item>PHONE</item>
+        <item>LAPTOP</item>
+        <item>TABLET</item>
+        <item>OTHER</item>
+    </string-array>
+</resources>

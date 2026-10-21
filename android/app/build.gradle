@@ -1,0 +1,40 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'nz.ac.aut.comp713.repairdesk'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'nz.ac.aut.comp713.repairdesk'
+        minSdk 31
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+
+        // 10.0.2.2 is the host machine as seen from the Android emulator.
+        // The address can also be changed on the sign-in screen (e.g. for a physical phone).
+        buildConfigField 'String', 'DEFAULT_SERVER_URL', '"http://10.0.2.2:8080"'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Only Android platform APIs (HttpURLConnection, org.json, JobScheduler), like the course labs.
+}
