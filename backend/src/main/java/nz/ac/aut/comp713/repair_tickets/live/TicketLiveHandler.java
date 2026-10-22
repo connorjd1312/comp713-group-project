@@ -14,7 +14,6 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -29,7 +28,7 @@ public class TicketLiveHandler extends TextWebSocketHandler {
     private static final Logger log = LoggerFactory.getLogger(TicketLiveHandler.class);
 
     private final ObjectMapper json;
-    private final Set<WebSocketSession> subscribers = ConcurrentHashMap.newKeySet();
+    private final Map<String, WebSocketSession> subscribers = new ConcurrentHashMap<>();
 
     public TicketLiveHandler(ObjectMapper json) {
         this.json = json;
@@ -40,6 +39,7 @@ public class TicketLiveHandler extends TextWebSocketHandler {
         JsonNode request;
         try {
             request = json.readTree(message.getPayload());
+            if (request == null || !request.isObject()) throw new IllegalArgumentException("Expected an object");
         } catch (RuntimeException e) {
             session.sendMessage(new TextMessage("{\"type\":\"error\",\"message\":\"Invalid JSON\"}"));
             return;
@@ -50,14 +50,15 @@ public class TicketLiveHandler extends TextWebSocketHandler {
         }
         // Register first, then acknowledge: anything committed after this point reaches the client.
         // Sends are serialised per session because broadcasts run on request threads.
-        subscribers.add(new ConcurrentWebSocketSessionDecorator(session, 2000, 64 * 1024));
-        session.sendMessage(new TextMessage("{\"type\":\"subscribed\"}"));
+        WebSocketSession subscriber = subscribers.computeIfAbsent(session.getId(),
+                key -> new ConcurrentWebSocketSessionDecorator(session, 2000, 64 * 1024));
+        subscriber.sendMessage(new TextMessage("{\"type\":\"subscribed\"}"));
         log.info("LIVE subscribed session={} subscribers={}", session.getId(), subscribers.size());
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        subscribers.removeIf(s -> s.getId().equals(session.getId()));
+        subscribers.remove(session.getId());
         log.info("LIVE closed session={} code={} subscribers={}", session.getId(), status.getCode(), subscribers.size());
     }
 
@@ -70,12 +71,12 @@ public class TicketLiveHandler extends TextWebSocketHandler {
                 "ticketId", event.ticketId(),
                 "status", event.status().name(),
                 "updatedAt", event.updatedAt().toString()));
-        for (WebSocketSession session : subscribers) {
+        for (WebSocketSession session : subscribers.values()) {
             try {
                 session.sendMessage(new TextMessage(payload));
             } catch (Exception e) {
                 // A dead connection must not stop the other subscribers or fail the REST request.
-                subscribers.remove(session);
+                subscribers.remove(session.getId(), session);
                 log.warn("LIVE dropped session={}: {}", session.getId(), e.getMessage());
             }
         }

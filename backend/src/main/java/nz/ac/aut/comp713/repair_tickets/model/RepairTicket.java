@@ -14,6 +14,10 @@ public class RepairTicket {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    @Column(nullable = false, columnDefinition = "bigint default 0")
+    private long version;
+
     // 多張工單 -> 一位客戶（外鍵 customer_id）
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
@@ -101,6 +105,7 @@ public class RepairTicket {
     }
 
     public Long getId() { return id; }
+    public long getVersion() { return version; }
     public Customer getCustomer() { return customer; }
     public String getDeviceType() { return deviceType; }
     public String getDeviceModel() { return deviceModel; }

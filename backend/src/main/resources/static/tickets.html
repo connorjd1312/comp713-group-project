@@ -52,9 +52,11 @@
   const filters = document.getElementById('filters');
   const rows = document.getElementById('rows');
   const message = document.getElementById('message');
+  let loadGeneration = 0;
 
   // quiet = live refresh: keep the current rows on screen instead of flashing "Loading…"
   async function loadTickets(quiet = false, changedId = null) {
+    const generation = ++loadGeneration;
     if (!quiet) hideMessage(message);
     const params = new URLSearchParams();
     const status = filters.status.value;
@@ -65,6 +67,7 @@
     if (!quiet) rows.innerHTML = '<tr><td colspan="6" class="muted">Loading…</td></tr>';
     try {
       const tickets = await callApi(API_BASE + (params.toString() ? '?' + params : ''));
+      if (generation !== loadGeneration) return;
       if (tickets.length === 0) {
         rows.innerHTML = '<tr><td colspan="6" class="muted">No tickets match these filters.</td></tr>';
         return;
@@ -81,6 +84,7 @@
       const changedRow = changedId && rows.querySelector(`tr[data-id="${changedId}"]`);
       if (changedRow) changedRow.classList.add('flash');
     } catch (err) {
+      if (generation !== loadGeneration) return;
       rows.innerHTML = '<tr><td colspan="6" class="muted">Could not load tickets.</td></tr>';
       showMessage(message, 'error', errorHtml(err));
     }

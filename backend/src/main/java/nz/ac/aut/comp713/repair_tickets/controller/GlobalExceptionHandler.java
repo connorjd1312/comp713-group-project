@@ -8,6 +8,7 @@ import nz.ac.aut.comp713.repair_tickets.exception.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -26,6 +27,12 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    ResponseEntity<ApiError> concurrentChange(OptimisticLockingFailureException ex, HttpServletRequest req) {
+        return build(HttpStatus.CONFLICT, "CONCURRENT_CHANGE",
+                "This ticket changed while you were editing it. Refresh and try again.", Map.of(), req);
+    }
 
     /** 400：@Valid 檢查沒過，列出每個欄位的錯誤。 */
     @ExceptionHandler(MethodArgumentNotValidException.class)

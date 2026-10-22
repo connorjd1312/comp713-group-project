@@ -102,4 +102,21 @@ class TicketLiveHandlerTests {
         socket.sendText("{\"type\":\"hello\"}", true).get(5, TimeUnit.SECONDS);
         assertTrue(next().contains("\"error\""));
     }
+
+    @Test
+    void repeatedSubscriptionDoesNotDuplicateNotifications() throws Exception {
+        subscribe();
+        subscribe();
+        service.createTicket("Repeat", "repeat@example.com", null,
+                "PHONE", null, "The screen remains black after charging");
+        assertTrue(next().contains("\"CREATED\""));
+        assertNull(received.poll(300, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    void nonObjectJsonGetsAnErrorAndConnectionRemainsUsable() throws Exception {
+        socket.sendText("null", true).get(5, TimeUnit.SECONDS);
+        assertTrue(next().contains("\"error\""));
+        subscribe();
+    }
 }
