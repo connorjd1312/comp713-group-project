@@ -1,6 +1,7 @@
 package nz.ac.aut.comp713.repair_tickets.service;
 
 import nz.ac.aut.comp713.repair_tickets.dto.TicketResponse;
+import nz.ac.aut.comp713.repair_tickets.event.TicketChangedEvent;
 import nz.ac.aut.comp713.repair_tickets.exception.BusinessRuleException;
 import nz.ac.aut.comp713.repair_tickets.exception.ForbiddenException;
 import nz.ac.aut.comp713.repair_tickets.exception.NotFoundException;
@@ -11,6 +12,7 @@ import nz.ac.aut.comp713.repair_tickets.model.RepairTicket;
 import nz.ac.aut.comp713.repair_tickets.model.TicketStatus;
 import nz.ac.aut.comp713.repair_tickets.repository.CustomerRepository;
 import nz.ac.aut.comp713.repair_tickets.repository.RepairTicketRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,10 +28,13 @@ public class TicketService {
 
     private final CustomerRepository customers;
     private final RepairTicketRepository tickets;
+    private final ApplicationEventPublisher events;
 
-    public TicketService(CustomerRepository customers, RepairTicketRepository tickets) {
+    public TicketService(CustomerRepository customers, RepairTicketRepository tickets,
+                         ApplicationEventPublisher events) {
         this.customers = customers;
         this.tickets = tickets;
+        this.events = events;
     }
 
     /** 建立工單：email 已存在就沿用該客戶，否則建立新客戶。新工單狀態一律是 RECEIVED。 */
@@ -42,7 +47,7 @@ public class TicketService {
 
         RepairTicket ticket = new RepairTicket(customer, deviceType.trim().toUpperCase(),
                 deviceModel, issueDescription.trim());
-        return TicketResponse.from(tickets.save(ticket));
+        return saveAndAnnounce(ticket, "CREATED");
     }
 
     /** 列出工單，可依狀態及／或客戶 email 篩選，新的在前。 */
@@ -83,7 +88,7 @@ public class TicketService {
         }
         checkQuoteAllows(ticket, next);
         ticket.changeStatus(next, note);
-        return TicketResponse.from(tickets.saveAndFlush(ticket));
+        return saveAndAnnounce(ticket, "STATUS_CHANGED");
     }
 
     /**
@@ -103,7 +108,7 @@ public class TicketService {
                     "Ticket " + id + " already has a " + current.getStatus() + " quote");
         }
         ticket.addQuote(amount, description.trim());
-        return TicketResponse.from(tickets.saveAndFlush(ticket));
+        return saveAndAnnounce(ticket, "QUOTE_ISSUED");
     }
 
     /** Customer approves or declines the pending quote. Only the ticket's own customer may answer. */
@@ -119,7 +124,7 @@ public class TicketService {
                     "Ticket " + id + " has no quote waiting for a decision");
         }
         ticket.respondToQuote(approved, comment == null ? null : comment.trim());
-        return TicketResponse.from(tickets.saveAndFlush(ticket));
+        return saveAndAnnounce(ticket, approved ? "QUOTE_APPROVED" : "QUOTE_DECLINED");
     }
 
     /** Repair work needs an approved quote; returning the device unrepaired needs a declined one. */
@@ -148,7 +153,19 @@ public class TicketService {
                     "Ticket " + id + " is already " + ticket.getStatus() + " and can no longer be cancelled");
         }
         ticket.changeStatus(TicketStatus.CANCELLED, "Cancelled by customer");
-        return TicketResponse.from(tickets.saveAndFlush(ticket));
+        return saveAndAnnounce(ticket, "CANCELLED");
+    }
+
+    /**
+     * Save the change and raise a TicketChangedEvent. Listeners (WebSocket, broker) only receive it
+     * after this transaction commits, so a rolled-back change is never announced.
+     */
+    private TicketResponse saveAndAnnounce(RepairTicket ticket, String change) {
+        RepairTicket saved = tickets.saveAndFlush(ticket);
+        Quote quote = saved.currentQuote();
+        events.publishEvent(TicketChangedEvent.of(change, saved.getId(), saved.getCustomer().getEmail(),
+                saved.getStatus(), quote == null ? null : quote.getStatus(), saved.getUpdatedAt()));
+        return TicketResponse.from(saved);
     }
 
     private RepairTicket findTicket(Long id) {

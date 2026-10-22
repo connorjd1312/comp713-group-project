@@ -17,7 +17,7 @@
 <main class="wrap">
   <p><a href="tickets.html">← Back to all tickets</a></p>
   <h1 id="title">Ticket</h1>
-  <p class="subtitle" id="subtitle"></p>
+  <p class="subtitle"><span id="subtitle"></span><span id="live" class="live off">Connecting…</span></p>
 
   <div id="message" class="message"></div>
 
@@ -200,6 +200,13 @@
   });
 
   load();
+  // Reload when this ticket changes elsewhere, e.g. the customer answers the quote on their phone.
+  connectLive(document.getElementById('live'), load, change => {
+    if (String(change.ticketId) === String(id)) {
+      load();
+      showMessage(message, 'success', `Updated live: ${escapeHtml(change.change.replace('_', ' ').toLowerCase())}.`);
+    }
+  });
 </script>
 </body>
 </html>
