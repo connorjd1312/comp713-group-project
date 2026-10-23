@@ -27,6 +27,7 @@ public class TicketDetailActivity extends Activity {
 
     private long ticketId;
     private Ticket ticket;
+    private int loadGeneration;
 
     private View content;
     private ProgressBar loading;
@@ -86,6 +87,7 @@ public class TicketDetailActivity extends Activity {
     }
 
     private void load() {
+        int generation = ++loadGeneration;
         if (!Prefs.isSignedIn(this)) {
             startActivity(new Intent(this, MainActivity.class));
             finish();
@@ -101,14 +103,19 @@ public class TicketDetailActivity extends Activity {
             try {
                 Ticket loaded = api.getTicket(id);
                 TicketNotifier.remember(getApplicationContext(), loaded);   // the customer has now seen it
-                runOnUiThread(() -> { if (!isDestroyed() && id == ticketId) render(loaded); });
+                runOnUiThread(() -> {
+                    if (!isDestroyed() && id == ticketId && generation == loadGeneration) render(loaded);
+                });
             } catch (ApiException e) {
-                runOnUiThread(() -> { if (!isDestroyed() && id == ticketId) showLoadError(e); });
+                runOnUiThread(() -> {
+                    if (!isDestroyed() && id == ticketId && generation == loadGeneration) showLoadError(e);
+                });
             }
         });
     }
 
     private void render(Ticket t) {
+        if (t.id != ticketId || (ticket != null && t.version < ticket.version)) return;
         ticket = t;
         loading.setVisibility(View.GONE);
         errorPanel.setVisibility(View.GONE);
@@ -204,7 +211,7 @@ public class TicketDetailActivity extends Activity {
                 Ticket updated = api.decideQuote(id, email, approved, comment);
                 TicketNotifier.remember(getApplicationContext(), updated);
                 runOnUiThread(() -> {
-                    if (isDestroyed()) return;
+                    if (isDestroyed() || id != ticketId) return;
                     setActionsEnabled(true);
                     commentInput.setText("");
                     render(updated);
@@ -212,7 +219,7 @@ public class TicketDetailActivity extends Activity {
                 });
             } catch (ApiException e) {
                 runOnUiThread(() -> {
-                    if (isDestroyed()) return;
+                    if (isDestroyed() || id != ticketId) return;
                     setActionsEnabled(true);
                     showMessage(false, e.describe());
                     if (e.getStatus() == 409) load();   // the quote changed on the server; show the current state
@@ -242,14 +249,14 @@ public class TicketDetailActivity extends Activity {
                 Ticket updated = api.getTicket(id);
                 TicketNotifier.remember(getApplicationContext(), updated);
                 runOnUiThread(() -> {
-                    if (isDestroyed()) return;
+                    if (isDestroyed() || id != ticketId) return;
                     setActionsEnabled(true);
                     render(updated);
                     showMessage(true, getString(R.string.ticket_cancelled));
                 });
             } catch (ApiException e) {
                 runOnUiThread(() -> {
-                    if (isDestroyed()) return;
+                    if (isDestroyed() || id != ticketId) return;
                     setActionsEnabled(true);
                     showMessage(false, e.describe());
                     if (e.getStatus() == 409) load();   // e.g. the technician already started diagnosis

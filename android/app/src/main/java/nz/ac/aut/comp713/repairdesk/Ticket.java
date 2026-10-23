@@ -20,6 +20,7 @@ public final class Ticket {
             List.of("RECEIVED", "DIAGNOSING", "REPAIRING", "READY", "COLLECTED");
 
     public final long id;
+    public final long version;
     public final String customerName;
     public final String customerEmail;
     public final String deviceType;
@@ -78,6 +79,7 @@ public final class Ticket {
 
     private Ticket(JSONObject json) throws JSONException {
         id = json.getLong("id");
+        version = json.optLong("version", 0);
         customerName = json.getString("customerName");
         customerEmail = json.getString("customerEmail");
         deviceType = json.getString("deviceType");
