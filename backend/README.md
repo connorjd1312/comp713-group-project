@@ -1,5 +1,7 @@
 # Repair Desk – Device Repair Ticket System
 
+For the current Assessment 3 system, use the [root README](../README.md). This guide documents the retained Assessment 2 starting point; current tests, quote endpoints, WebSocket, concurrency protection and messaging are described in the root guide and technical report.
+
 COMP713 Assessment 2 – Individual Project (**Option A: Distributed Web/API Application**)
 
 A small distributed web application for a phone/laptop repair shop. Customers book a repair through a web form, and technicians move each ticket through a fixed workflow (`RECEIVED → DIAGNOSING → REPAIRING → READY → COLLECTED`). Every status change is stored as history.
@@ -134,6 +136,6 @@ curl -i localhost:8080/api/tickets/999                                          
 
 - No login or roles: anyone using the web client can act as a technician. Authentication was outside the scope of this assessment.
 - When an existing email is used again, the stored customer name and phone are kept (not updated).
-- No optimistic locking: if two technicians update the same ticket at the same moment, the last write wins.
+- Assessment 3 adds optimistic locking and a structured 409 response when concurrent writes conflict.
 - Listing tickets loads each ticket's history with extra queries (N+1); acceptable for small data, but would need a fetch join for large volumes.
 - The H2 file database is designed for a single server instance and is not suitable for production.

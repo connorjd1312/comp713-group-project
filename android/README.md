@@ -1,5 +1,7 @@
 # Repair Desk – Android customer app
 
+See the [root README](../README.md) for the complete Assessment 3 startup, broker integration and verification steps. The open technician web pages now update through WebSocket after a mobile quote decision; no manual browser reload is needed. Background notification delivery is best effort and can be deferred by Android.
+
 Native Android app (Java, Android platform APIs only) for the **customer** role. It talks to the
 backend REST API in `../backend`.
 
