@@ -15,7 +15,7 @@
 </header>
 
 <main class="wrap">
-  <h1>Repair tickets</h1>
+  <h1>Repair tickets <span id="live" class="live off">Connecting…</span></h1>
   <p class="subtitle">Technician view. Click a ticket to see its history and update its status.</p>
 
   <div class="card">
@@ -52,18 +52,22 @@
   const filters = document.getElementById('filters');
   const rows = document.getElementById('rows');
   const message = document.getElementById('message');
+  let loadGeneration = 0;
 
-  async function loadTickets() {
-    hideMessage(message);
+  // quiet = live refresh: keep the current rows on screen instead of flashing "Loading…"
+  async function loadTickets(quiet = false, changedId = null) {
+    const generation = ++loadGeneration;
+    if (!quiet) hideMessage(message);
     const params = new URLSearchParams();
     const status = filters.status.value;
     const email = filters.email.value.trim();
     if (status) params.set('status', status);
     if (email) params.set('email', email);
 
-    rows.innerHTML = '<tr><td colspan="6" class="muted">Loading…</td></tr>';
+    if (!quiet) rows.innerHTML = '<tr><td colspan="6" class="muted">Loading…</td></tr>';
     try {
       const tickets = await callApi(API_BASE + (params.toString() ? '?' + params : ''));
+      if (generation !== loadGeneration) return;
       if (tickets.length === 0) {
         rows.innerHTML = '<tr><td colspan="6" class="muted">No tickets match these filters.</td></tr>';
         return;
@@ -77,7 +81,10 @@
           <td>${t.quote ? badge(t.quote.status) + '<br><span class="muted">' + formatMoney(t.quote.amount) + '</span>' : ''}</td>
           <td>${formatDate(t.updatedAt)}</td>
         </tr>`).join('');
+      const changedRow = changedId && rows.querySelector(`tr[data-id="${changedId}"]`);
+      if (changedRow) changedRow.classList.add('flash');
     } catch (err) {
+      if (generation !== loadGeneration) return;
       rows.innerHTML = '<tr><td colspan="6" class="muted">Could not load tickets.</td></tr>';
       showMessage(message, 'error', errorHtml(err));
     }
@@ -91,6 +98,10 @@
   document.getElementById('resetBtn').addEventListener('click', () => { filters.reset(); loadTickets(); });
 
   loadTickets();
+  // Another user's change (e.g. a customer approving a quote on Android) refreshes this list without a reload.
+  connectLive(document.getElementById('live'),
+    () => loadTickets(true),
+    change => loadTickets(true, change.ticketId));
 </script>
 </body>
 </html>

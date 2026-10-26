@@ -60,6 +60,42 @@ function formatMoney(amount) {
   return Number(amount).toLocaleString('en-NZ', { style: 'currency', currency: 'NZD' });
 }
 
+/**
+ * Live updates over WebSocket (same steps as the Week 10 live lab):
+ * subscribe -> wait for "subscribed" -> reload the REST snapshot -> apply change notices.
+ * When the connection drops the indicator shows "Reconnecting…" and we retry with backoff;
+ * the snapshot reload after re-subscribing repairs anything missed while offline.
+ */
+function connectLive(indicator, onSnapshotNeeded, onChange) {
+  let retryMs = 1000;
+  function setState(state, text) {
+    indicator.className = 'live ' + state;
+    indicator.textContent = text;
+  }
+  function open() {
+    const scheme = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const socket = new WebSocket(scheme + location.host + '/ws/tickets');
+    socket.onopen = () => socket.send(JSON.stringify({ type: 'subscribe' }));
+    socket.onmessage = e => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'subscribed') {
+        retryMs = 1000;
+        setState('on', 'Live');
+        onSnapshotNeeded();
+      } else if (msg.type === 'ticketChanged') {
+        onChange(msg);
+      }
+    };
+    socket.onclose = () => {
+      setState('off', `Reconnecting in ${retryMs / 1000}s…`);
+      setTimeout(open, retryMs);
+      retryMs = Math.min(retryMs * 2, 10000);
+    };
+  }
+  setState('off', 'Connecting…');
+  open();
+}
+
 function clearFieldErrors(form) {
   form.querySelectorAll('.field-error').forEach(el => { el.textContent = ''; });
   form.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));

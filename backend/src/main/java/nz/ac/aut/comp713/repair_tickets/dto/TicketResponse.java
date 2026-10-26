@@ -16,6 +16,7 @@ import java.util.List;
  */
 public record TicketResponse(
         Long id,
+        long version,
         String customerName,
         String customerEmail,
         String deviceType,
@@ -45,6 +46,7 @@ public record TicketResponse(
     public static TicketResponse from(RepairTicket t) {
         return new TicketResponse(
                 t.getId(),
+                t.getVersion(),
                 t.getCustomer().getName(),
                 t.getCustomer().getEmail(),
                 t.getDeviceType(),

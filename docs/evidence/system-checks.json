@@ -1,0 +1,60 @@
+{
+  "at": "2026-10-26T22:21:27.876Z",
+  "results": [
+    {
+      "name": "Invalid input and missing ticket return appropriate errors",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Customer booking is visible through REST and WebSocket",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Broker outage leaves a durable event while ticket creation succeeds",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Quote decline, revision and approval enforce workflow and notify the technician",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Reconnection snapshot recovers changes missed while disconnected",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Outbox drains when the broker becomes available",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Broker restart retains events; crash redelivery creates one receipt",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Independent consumer drains backlog and repeated event has no duplicate effect",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Response-time acceptance target",
+      "passed": true,
+      "detail": "p95 5.11 ms < 500 ms; 101 tickets, 100 samples"
+    },
+    {
+      "name": "Backend failure/restart preserves ticket, quote and history",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Outbox backlog survives backend restart and is eventually consumed",
+      "passed": true,
+      "detail": ""
+    }
+  ]
+}

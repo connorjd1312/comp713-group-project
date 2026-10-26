@@ -25,3 +25,8 @@ replay_pid*
 
 # Keep the Android Gradle wrapper (needed to build the app)
 !android/gradle/wrapper/gradle-wrapper.jar
+
+# Local messaging data, evidence runs and Maven output
+messaging/target/
+data/
+test-results/

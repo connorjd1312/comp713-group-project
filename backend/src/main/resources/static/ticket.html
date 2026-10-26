@@ -17,7 +17,7 @@
 <main class="wrap">
   <p><a href="tickets.html">← Back to all tickets</a></p>
   <h1 id="title">Ticket</h1>
-  <p class="subtitle" id="subtitle"></p>
+  <p class="subtitle"><span id="subtitle"></span><span id="live" class="live off">Connecting…</span></p>
 
   <div id="message" class="message"></div>
 
@@ -95,8 +95,10 @@
   const noteInput = document.getElementById('note');
   const advanceBtn = document.getElementById('advanceBtn');
   let current = null;
+  let loadGeneration = 0;
 
   function render(t) {
+    if (current && t.version < current.version) return;
     current = t;
     document.getElementById('content').style.display = '';
     document.getElementById('title').innerHTML = `Ticket #${t.id} ${badge(t.status)}`;
@@ -116,6 +118,11 @@
     const next = NEXT_STATUS[t.status];
     advanceBtn.textContent = next ? `Move to ${next}` : 'No further steps';
     advanceBtn.disabled = !next;
+    if (next === 'REPAIRING' && (!t.quote || t.quote.status !== 'APPROVED')) {
+      advanceBtn.disabled = true;
+      advanceBtn.textContent = 'Waiting for quote approval';
+    }
+    document.getElementById('cancelBtn').disabled = t.status !== 'RECEIVED';
 
     renderQuote(t);
 
@@ -161,10 +168,13 @@
   });
 
   async function load() {
+    const generation = ++loadGeneration;
     if (!id) { showMessage(message, 'error', '<strong>No ticket id in the address.</strong>'); return; }
     try {
-      render(await callApi(`${API_BASE}/${encodeURIComponent(id)}`));
+      const ticket = await callApi(`${API_BASE}/${encodeURIComponent(id)}`);
+      if (generation === loadGeneration) render(ticket);
     } catch (err) {
+      if (generation !== loadGeneration) return;
       showMessage(message, 'error', errorHtml(err));
     }
   }
@@ -200,6 +210,13 @@
   });
 
   load();
+  // Reload when this ticket changes elsewhere, e.g. the customer answers the quote on their phone.
+  connectLive(document.getElementById('live'), load, change => {
+    if (String(change.ticketId) === String(id)) {
+      load();
+      showMessage(message, 'success', `Updated live: ${escapeHtml(change.change.replace('_', ' ').toLowerCase())}.`);
+    }
+  });
 </script>
 </body>
 </html>

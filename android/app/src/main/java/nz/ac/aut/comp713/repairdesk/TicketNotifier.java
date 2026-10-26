@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -35,7 +36,8 @@ public final class TicketNotifier {
     }
 
     public static boolean canNotify(Context context) {
-        return context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        return (Build.VERSION.SDK_INT < 33
+                || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
                 && context.getSystemService(NotificationManager.class).areNotificationsEnabled();
     }
 
