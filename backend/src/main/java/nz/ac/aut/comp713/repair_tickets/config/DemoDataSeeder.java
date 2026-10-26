@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+
 /** 資料庫是空的時候，啟動時自動放入 3 張示範工單，方便測試和錄影。 */
 @Component
 public class DemoDataSeeder implements CommandLineRunner {
@@ -34,10 +36,13 @@ public class DemoDataSeeder implements CommandLineRunner {
         TicketResponse ben = service.createTicket("Ben Taylor", "ben@example.com", "022 222 2222",
                 "LAPTOP", "MacBook Air M1", "Battery drains from full to empty in about one hour.");
         service.updateStatus(ben.id(), TicketStatus.DIAGNOSING, "Running battery health check");
+        service.createQuote(ben.id(), new BigDecimal("229.00"), "Replace battery (genuine part) and recalibrate");
 
         TicketResponse chloe = service.createTicket("Chloe Wong", "chloe@example.com", null,
                 "TABLET", "iPad 9th gen", "Charging port is loose and only charges at an angle.");
         service.updateStatus(chloe.id(), TicketStatus.DIAGNOSING, "Inspecting charging port");
+        service.createQuote(chloe.id(), new BigDecimal("119.00"), "Replace charging port");
+        service.decideQuote(chloe.id(), "chloe@example.com", true, "Yes please");
         service.updateStatus(chloe.id(), TicketStatus.REPAIRING, "Replacing charging port");
         service.updateStatus(chloe.id(), TicketStatus.READY, "Port replaced and tested, ready for pickup");
     }

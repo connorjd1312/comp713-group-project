@@ -46,6 +46,9 @@ tbody tr:hover { background: #f0f4ff; }
 .badge.READY      { background: #e8f5e9; color: #1b5e20; }
 .badge.COLLECTED  { background: #eceff1; color: #37474f; }
 .badge.CANCELLED  { background: #fdecea; color: #8e1c1c; }
+.badge.PENDING    { background: #fff8e1; color: #92400e; }
+.badge.APPROVED   { background: #e8f5e9; color: #1b5e20; }
+.badge.DECLINED   { background: #fdecea; color: #8e1c1c; }
 .filters { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
 .filters .field { margin: 0; min-width: 180px; }
 .details dt { color: var(--muted); font-size: 13px; }

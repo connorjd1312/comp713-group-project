@@ -58,6 +58,30 @@
     </div>
 
     <div class="card">
+      <h2 style="font-size:18px;margin-top:0">Repair quote</h2>
+      <div id="quoteInfo"></div>
+      <form id="quoteForm" style="display:none;margin-top:12px" novalidate>
+        <div class="grid-2">
+          <div class="field">
+            <label for="quoteAmount">Amount (NZD)</label>
+            <input id="quoteAmount" name="amount" type="number" step="0.01" min="0" placeholder="e.g. 189.00">
+            <div class="field-error" data-for="amount"></div>
+          </div>
+          <div class="field">
+            <label for="quoteDescription">Work to be done</label>
+            <input id="quoteDescription" name="description" placeholder="e.g. Replace screen assembly">
+            <div class="field-error" data-for="description"></div>
+          </div>
+        </div>
+        <button type="submit" class="primary">Send quote to customer</button>
+      </form>
+      <p class="muted" style="font-size:13px;margin-bottom:0">
+        Repair can only start after the customer approves the quote in the mobile app.
+        If they decline, send a revised quote or set the status to CANCELLED to return the device unrepaired.
+      </p>
+    </div>
+
+    <div class="card">
       <h2 style="font-size:18px;margin-top:0">Status history</h2>
       <ul class="history" id="history"></ul>
     </div>
@@ -93,12 +117,48 @@
     advanceBtn.textContent = next ? `Move to ${next}` : 'No further steps';
     advanceBtn.disabled = !next;
 
+    renderQuote(t);
+
     document.getElementById('history').innerHTML = t.history.length === 0
       ? '<li class="muted">No status changes yet.</li>'
       : t.history.slice().reverse().map(h => `
-          <li>${badge(h.from)} → ${badge(h.to)} ${h.note ? '· ' + escapeHtml(h.note) : ''}
+          <li>${h.from === h.to ? '' : badge(h.from) + ' → ' + badge(h.to)} ${h.note ? (h.from === h.to ? '' : '· ') + escapeHtml(h.note) : ''}
           <div class="when">${formatDate(h.at)}</div></li>`).join('');
   }
+
+  const quoteForm = document.getElementById('quoteForm');
+
+  function renderQuote(t) {
+    const q = t.quote;
+    document.getElementById('quoteInfo').innerHTML = q
+      ? `<p style="margin:0">${badge(q.status)} <strong>${formatMoney(q.amount)}</strong> · ${escapeHtml(q.description)}</p>
+         <p class="muted" style="font-size:13px;margin:4px 0 0">Sent ${formatDate(q.createdAt)}${q.respondedAt
+           ? ` · answered ${formatDate(q.respondedAt)}${q.customerComment ? ' · “' + escapeHtml(q.customerComment) + '”' : ''}`
+           : ' · waiting for the customer'}</p>`
+      : '<p class="muted" style="margin:0">No quote has been sent yet.</p>';
+    // A new quote is allowed while diagnosing when there is none yet or the last one was declined
+    quoteForm.style.display = t.status === 'DIAGNOSING' && (!q || q.status === 'DECLINED') ? '' : 'none';
+  }
+
+  quoteForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    hideMessage(message);
+    clearFieldErrors(quoteForm);
+    try {
+      const amount = quoteForm.amount.value.trim();
+      const updated = await callApi(`${API_BASE}/${current.id}/quote`, {
+        method: 'POST',
+        body: JSON.stringify({ amount: amount === '' ? null : Number(amount),
+                               description: quoteForm.description.value.trim() }),
+      });
+      quoteForm.reset();
+      render(updated);
+      showMessage(message, 'success', 'Quote sent. The customer can now approve or decline it in the app.');
+    } catch (err) {
+      showFieldErrors(quoteForm, err.fieldErrors);
+      showMessage(message, 'error', errorHtml(err));
+    }
+  });
 
   async function load() {
     if (!id) { showMessage(message, 'error', '<strong>No ticket id in the address.</strong>'); return; }

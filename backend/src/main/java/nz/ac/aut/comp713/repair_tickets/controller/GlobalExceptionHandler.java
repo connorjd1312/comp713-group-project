@@ -3,6 +3,7 @@ package nz.ac.aut.comp713.repair_tickets.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import nz.ac.aut.comp713.repair_tickets.dto.ApiError;
 import nz.ac.aut.comp713.repair_tickets.exception.BusinessRuleException;
+import nz.ac.aut.comp713.repair_tickets.exception.ForbiddenException;
 import nz.ac.aut.comp713.repair_tickets.exception.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotFoundException.class)
     ResponseEntity<ApiError> notFound(NotFoundException ex, HttpServletRequest req) {
         return build(HttpStatus.NOT_FOUND, "NOT_FOUND", ex.getMessage(), Map.of(), req);
+    }
+
+    /** 403: acting on another customer's ticket (e.g. answering a quote with the wrong email). */
+    @ExceptionHandler(ForbiddenException.class)
+    ResponseEntity<ApiError> forbidden(ForbiddenException ex, HttpServletRequest req) {
+        return build(HttpStatus.FORBIDDEN, "FORBIDDEN", ex.getMessage(), Map.of(), req);
     }
 
     /** 409：請求格式正確，但違反商業規則（跳步、不能取消）。 */

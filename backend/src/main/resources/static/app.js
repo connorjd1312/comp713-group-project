@@ -55,3 +55,20 @@ function formatDate(iso) {
 function badge(status) {
   return `<span class="badge ${escapeHtml(status)}">${escapeHtml(status)}</span>`;
 }
+
+function formatMoney(amount) {
+  return Number(amount).toLocaleString('en-NZ', { style: 'currency', currency: 'NZD' });
+}
+
+function clearFieldErrors(form) {
+  form.querySelectorAll('.field-error').forEach(el => { el.textContent = ''; });
+  form.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
+}
+
+function showFieldErrors(form, fieldErrors) {
+  Object.entries(fieldErrors || {}).forEach(([field, text]) => {
+    const slot = form.querySelector(`.field-error[data-for="${field}"]`);
+    if (slot) slot.textContent = text;
+    if (form[field]) form[field].classList.add('invalid');
+  });
+}
