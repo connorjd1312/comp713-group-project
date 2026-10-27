@@ -2,7 +2,7 @@
 
 COMP713 Assessment 3: customers book and track repairs in Android, while technicians manage tickets and quotes on the web.
 
-Repository: https://github.com/kiwilu/comp713-group-project
+Repository: https://github.com/connorjd1312/comp713-group-project
 
 MVP release: `mvp-assessment3`
 
