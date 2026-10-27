@@ -58,3 +58,4 @@ Build first. The last command tests the complete system, recovery and response t
 - Databases are created automatically in `backend/data/` and `data/`. Keep these folders to retain saved repairs and receipts.
 - This is a local demo without authentication. Background notifications may be delayed by Android.
 - Built on the Assessment 2 project `kiwilu/repair-tickets` at baseline `328aeea`. Architecture and limitations are in the [technical report](docs/TECHNICAL_REPORT.md).
+
